@@ -72,6 +72,7 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
             return
         }
 
+        message.Username = html.EscapeString(message.Username)
         message.Message = html.EscapeString(message.Message)
         message.Timestamp = time.Now().Unix()
 
