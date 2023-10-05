@@ -1,0 +1,10 @@
+services:
+  server:
+    image: alpine
+    container_name: chat-websocket
+    ports:
+      - 8765:8765
+    volumes:
+      - ./chat-websocket:/bin/chat-websocket:ro
+    command: chat-websocket
+    restart: "unless-stopped"
