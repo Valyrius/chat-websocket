@@ -1,77 +1,82 @@
 package main
 
 import (
-	"html"
-	"log"
-	"net/http"
-	"time"
+    "log"
+    "time"
+    "html"
+    "net/http"
 
-	"github.com/gorilla/websocket"
+    "github.com/gorilla/websocket"
 )
 
 var (
-	upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
-	}
+    upgrader = websocket.Upgrader{
+        CheckOrigin: func(r *http.Request) bool {
+            return true
+        },
+    }
 
-	connected = make(map[*websocket.Conn]bool)
+    connected = make(map[*websocket.Conn]bool)
 )
 
 type Message struct {
-	Username      string `json:"username"`
-	UsernameColor string `json:"username_color"`
-	Message       string `json:"message"`
-	Timestamp     int64  `json:"timestamp"`
+    Username      string `json:"username"`
+    UsernameColor string `json:"username_color"`
+    Message       string `json:"message"`
+    Timestamp     int64  `json:"timestamp"`
 }
+
 
 func main() {
-	log.Println("starting server on :8765")
-	http.HandleFunc("/", handleConnection)
-	err := http.ListenAndServe(":8765", nil)
-	if err != nil {
-		log.Fatal("Error starting WebSocket server: ", err)
-	}
+    log.Println("starting server on :8765")
+    http.HandleFunc("/", handleConnection)
+    err := http.ListenAndServe(":8765", nil)
+    if err != nil {
+        log.Fatal("Error starting WebSocket server: ", err)
+    }
 }
+
 
 func sendMessage(socket *websocket.Conn, message Message) {
-	err := socket.WriteJSON(message)
-	if err != nil {
-		socket.Close()
-		delete(connected, socket)
-		log.Println(err)
-	}
+    err := socket.WriteJSON(message)
+    if err != nil {
+        socket.Close()
+        delete(connected, socket)
+        log.Println(err)
+    }
 }
+
 
 func broadcastMessage(message Message) {
-	for client := range connected {
-		go sendMessage(client, message)
-	}
+    for client := range connected {
+        go sendMessage(client, message)
+    }
 }
+
 
 func handleConnection(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	defer conn.Close()
+    conn, err := upgrader.Upgrade(w, r, nil)
+    if err != nil {
+        log.Println(err)
+        return
+    }
+    defer conn.Close()
 
-	connected[conn] = true
+    connected[conn] = true
 
-	for {
-		message := Message{}
-		err := conn.ReadJSON(&message)
-		if err != nil {
-			delete(connected, conn)
-			return
-		}
+    for {
+        message := Message{}
+        err := conn.ReadJSON(&message)
+        if err != nil {
+            delete(connected, conn)
+            return
+        }
 
-		message.Username = html.EscapeString(message.Username)
-		message.Message = html.EscapeString(message.Message)
-		message.Timestamp = time.Now().Unix()
+        message.Username = html.EscapeString(message.Username)
+        message.Message = html.EscapeString(message.Message)
+        message.Timestamp = time.Now().Unix()
 
-		broadcastMessage(message)
-	}
+        broadcastMessage(message)
+    }
 }
+
